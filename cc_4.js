@@ -1,4 +1,4 @@
-const products = [
+const initialProducts = [
     { name: "Laptop", category: "electronics", price: 1200, inventory: 5 },
     { name: "T-Shirt", category: "apparel", price: 30, inventory: 20 },
     { name: "Milk", category: "groceries", price: 4, inventory: 50 },
@@ -6,60 +6,109 @@ const products = [
     { name: "Book", category: "education", price: 25, inventory: 15 }
 ];
 
-for (const product of products) {
-    let discountRate = 0;
+const customerType = "student";
+const checkoutCycles = 3;
 
-    switch (product.category) {
+function getCategoryDiscountRate(category) {
+    switch (category) {
         case "electronics":
-            discountRate = 0.20;
-            break;
+            return 0.20;
         case "apparel":
-            discountRate = 0.15;
-            break;
+            return 0.15;
         case "groceries":
         case "household":
-            discountRate = 0.10;
-            break;
+            return 0.10;
         default:
-            discountRate = 0;
-            break;
+            return 0;
+    }
+}
+
+function getCustomerDiscountRate(type) {
+    if (type === "student") {
+        return 0.05;
     }
 
-    product.discountedPrice = product.price - (product.price * discountRate);
+    if (type === "senior") {
+        return 0.07;
+    }
+
+    return 0;
 }
 
-let customerType = "student";
-let extraDiscount = 0;
-
-if (customerType === "student") {
-    extraDiscount = 0.05;
-} else if (customerType === "senior") {
-    extraDiscount = 0.07;
-} else {
-    extraDiscount = 0;
+function calculateDiscountedPrice(price, discountRate) {
+    return price * (1 - discountRate);
 }
 
-for (let i = 1; i <= 3; i++) {
-    let cartTotal = 0;
+function createProductCatalog(products) {
+    return products.map((product) => ({
+        ...product,
+        discountedPrice: calculateDiscountedPrice(
+            product.price,
+            getCategoryDiscountRate(product.category)
+        )
+    }));
+}
 
-    for (const product of products) {
-        if (product.inventory > 0) {
-            cartTotal += product.discountedPrice;
-            product.inventory--;
+function simulateCheckout(catalog, cycles, customerDiscountRate) {
+    const report = [];
+    const inventory = catalog.map((product) => ({ ...product }));
+
+    for (let cycle = 1; cycle <= cycles; cycle += 1) {
+        const itemsPurchased = inventory.filter((product) => product.inventory > 0);
+
+        if (itemsPurchased.length === 0) {
+            report.push(`Cycle ${cycle}: no inventory remaining.`);
+            continue;
         }
+
+        const totalBeforeCustomerDiscount = itemsPurchased.reduce((sum, product) => {
+            sum += product.discountedPrice;
+            product.inventory -= 1;
+            return sum;
+        }, 0);
+
+        const finalTotal = calculateDiscountedPrice(totalBeforeCustomerDiscount, customerDiscountRate);
+        report.push(`Cycle ${cycle}: ${itemsPurchased.length} item(s) purchased, total $${finalTotal.toFixed(2)}.`);
     }
 
-    cartTotal = cartTotal - (cartTotal * extraDiscount);
-
-    console.log(`Customer ${i} total: $${cartTotal.toFixed(2)}`);
+    return report;
 }
 
-for (const key in products[0]) {
-    console.log(`${key}: ${products[0][key]}`);
+function formatInventoryReport(catalog) {
+    return catalog.map((product) => {
+        return `- ${product.name} (${product.category}): $${product.discountedPrice.toFixed(2)}, inventory ${product.inventory}`;
+    });
 }
 
-for (const product of products) {
-    for (const [key, value] of Object.entries(product)) {
-        console.log(`${key}: ${value}`);
+function renderReport(lines) {
+    const reportElement = typeof document !== "undefined" && document.getElementById("report");
+    const formattedText = lines.join("\n");
+
+    if (reportElement) {
+        reportElement.textContent = formattedText;
     }
+
+    console.log(formattedText);
+}
+
+function runSimulation() {
+    const catalog = createProductCatalog(initialProducts);
+    const customerDiscountRate = getCustomerDiscountRate(customerType);
+    const summaryLines = [
+        `Customer type: ${customerType}`,
+        "Category discounts and inventory simulation:",
+        "",
+        "Initial inventory and discounted prices:",
+        ...formatInventoryReport(catalog),
+        "",
+        ...simulateCheckout(catalog, checkoutCycles, customerDiscountRate)
+    ];
+
+    renderReport(summaryLines);
+}
+
+if (typeof window !== "undefined") {
+    window.addEventListener("DOMContentLoaded", runSimulation);
+} else {
+    runSimulation();
 }
